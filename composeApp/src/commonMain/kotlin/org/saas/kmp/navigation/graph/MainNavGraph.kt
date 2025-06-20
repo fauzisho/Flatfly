@@ -8,7 +8,10 @@ import androidx.navigation.navigation
 import org.saas.kmp.navigation.Graph
 import org.saas.kmp.navigation.Routes
 import org.saas.kmp.screens.HomeScreen
-import org.saas.kmp.screens.SettingScreen
+import org.saas.kmp.screens.AccountScreen
+import org.saas.kmp.screens.DocumentScreen
+import org.saas.kmp.screens.ResidenceScreen
+import org.saas.kmp.screens.BuddyHelpScreen
 
 fun NavGraphBuilder.mainNavGraph(
     rootNavController: NavHostController,
@@ -21,8 +24,17 @@ fun NavGraphBuilder.mainNavGraph(
         composable(route = Routes.Home.route) {
             HomeScreen(rootNavController = rootNavController, paddingValues = innerPadding)
         }
-        composable(route = Routes.Setting.route) {
-            SettingScreen(rootNavController = rootNavController, paddingValues = innerPadding)
+        composable(route = Routes.Document.route) {
+            DocumentScreen(rootNavController = rootNavController, paddingValues = innerPadding)
+        }
+        composable(route = Routes.Residence.route) {
+            ResidenceScreen(rootNavController = rootNavController, paddingValues = innerPadding)
+        }
+        composable(route = Routes.BuddyHelp.route) {
+            BuddyHelpScreen(rootNavController = rootNavController, paddingValues = innerPadding)
+        }
+        composable(route = Routes.Account.route) {
+            AccountScreen(rootNavController = rootNavController, paddingValues = innerPadding)
         }
     }
 

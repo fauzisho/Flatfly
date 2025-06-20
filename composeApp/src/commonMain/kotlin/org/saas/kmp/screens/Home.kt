@@ -1,102 +1,46 @@
 package org.saas.kmp.screens
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import org.saas.kmp.navigation.Routes
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    rootNavController: NavController, paddingValues: PaddingValues
+    rootNavController: NavController,
+    paddingValues: PaddingValues
 ) {
     var name by remember {
         mutableStateOf("")
     }
-    Column(
-        modifier = Modifier.fillMaxSize().padding(paddingValues),
-        verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Home",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        TextField(
-            value = name,
-            onValueChange = {
-                name = it
-            },
-            label = {
-                Text(
-                    text = "Enter the name"
-                )
-            })
-        Button(onClick = {
-            rootNavController.currentBackStackEntry?.savedStateHandle?.apply {
-                set("name", name)
-            }
-            rootNavController.navigate(Routes.HomeDetail.route)
-        }) {
-            Text(
-                text = "Move to Home Detail Screen",
-                fontSize = 20.sp
-            )
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HomeDetailScreen(
-    rootNavController: NavController,
-    name: String
-) {
     Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(horizontal = 16.dp)
     ) {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Home Detail",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = {
-                    rootNavController.navigateUp()
-                }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                    )
-                }
-            }
-        )
+        // Title at the top left
         Text(
-            text = "Name = $name",
-            fontSize = 20.sp
+            text = "Home",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 32.dp)
         )
-        Spacer(modifier = Modifier.height(20.dp))
     }
 }
