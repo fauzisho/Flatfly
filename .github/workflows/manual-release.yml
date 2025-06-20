@@ -1,0 +1,202 @@
+name: 🎯 Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version increment type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      custom_version:
+        description: 'Custom version (optional, overrides version_type)'
+        required: false
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - prerelease
+      release_notes:
+        description: 'Custom release notes (optional)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+jobs:
+  trigger-builds:
+    name: 🚀 Trigger All Builds
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📱 Trigger Android Build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build-android.yml',
+              ref: context.ref,
+              inputs: {
+                release_type: 'release'
+              }
+            });
+            
+      - name: 🖥️ Trigger Desktop Build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build-desktop.yml',
+              ref: context.ref,
+              inputs: {
+                release_type: 'release'
+              }
+            });
+            
+      - name: 🌐 Trigger Web Build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy-pages.yml',
+              ref: context.ref
+            });
+            
+      - name: ⏱️ Wait for Builds to Start
+        run: |
+          echo "Waiting for all builds to start..."
+          sleep 30
+          
+      - name: 📊 Build Trigger Summary
+        run: |
+          echo "## 🚀 Manual Release Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version Type** | ${{ inputs.version_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Custom Version** | ${{ inputs.custom_version || 'Auto-generated' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Type** | ${{ inputs.release_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔄 Triggered Workflows:" >> $GITHUB_STEP_SUMMARY
+          echo "- 📱 Android Build & Publish" >> $GITHUB_STEP_SUMMARY
+          echo "- 🖥️ Desktop Build & Publish" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌐 Web Deploy to Pages" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⏭️ Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Monitor the **Actions** tab for build progress" >> $GITHUB_STEP_SUMMARY
+          echo "2. Once all builds complete successfully, the **Auto Release** workflow will trigger" >> $GITHUB_STEP_SUMMARY
+          echo "3. A new release will be created automatically with all artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎯 **Expected Release Time**: 10-15 minutes" >> $GITHUB_STEP_SUMMARY
+
+  wait-for-completion:
+    name: ⏳ Wait for Builds
+    runs-on: ubuntu-latest
+    needs: trigger-builds
+    
+    steps:
+      - name: ⏳ Monitor Build Progress
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const maxWaitTime = 20 * 60 * 1000; // 20 minutes
+            const checkInterval = 30 * 1000; // 30 seconds
+            const startTime = Date.now();
+            
+            const requiredWorkflows = [
+              "📱 Build & Publish Android App",
+              "🖥️ Build & Publish Desktop Apps", 
+              "🌐 Deploy to GitHub Pages"
+            ];
+            
+            console.log('Monitoring build progress...');
+            
+            while (Date.now() - startTime < maxWaitTime) {
+              const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 50,
+                head_sha: context.sha
+              });
+              
+              const recentRuns = runs.workflow_runs.filter(run => 
+                requiredWorkflows.includes(run.name) && 
+                run.head_sha === context.sha &&
+                new Date(run.created_at) > new Date(Date.now() - 10 * 60 * 1000) // Last 10 minutes
+              );
+              
+              const workflowStatus = {};
+              recentRuns.forEach(run => {
+                if (!workflowStatus[run.name] || new Date(run.created_at) > new Date(workflowStatus[run.name].created_at)) {
+                  workflowStatus[run.name] = run;
+                }
+              });
+              
+              console.log('Current status:', Object.fromEntries(
+                Object.entries(workflowStatus).map(([name, run]) => [name, run.status])
+              ));
+              
+              const allCompleted = requiredWorkflows.every(workflow => 
+                workflowStatus[workflow] && workflowStatus[workflow].status === 'completed'
+              );
+              
+              if (allCompleted) {
+                const allSuccessful = requiredWorkflows.every(workflow => 
+                  workflowStatus[workflow].conclusion === 'success'
+                );
+                
+                if (allSuccessful) {
+                  console.log('✅ All builds completed successfully!');
+                  core.setOutput('build_success', 'true');
+                  return;
+                } else {
+                  console.log('❌ Some builds failed');
+                  core.setOutput('build_success', 'false');
+                  throw new Error('Some builds failed');
+                }
+              }
+              
+              await new Promise(resolve => setTimeout(resolve, checkInterval));
+            }
+            
+            console.log('⏰ Timeout waiting for builds');
+            core.setOutput('build_success', 'timeout');
+            throw new Error('Timeout waiting for builds to complete');
+            
+      - name: 📊 Final Status Summary
+        if: always()
+        run: |
+          echo "## ⏳ Build Monitoring Complete" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Monitor Duration** | $(( ($(date +%s) - $(date -d '20 minutes ago' +%s)) / 60 )) minutes |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build Status** | ${{ steps.wait.outputs.build_success || 'Unknown' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ steps.wait.outputs.build_success }}" == "true" ]]; then
+            echo "### ✅ Success!" >> $GITHUB_STEP_SUMMARY
+            echo "All builds completed successfully. The Auto Release workflow should trigger shortly." >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ steps.wait.outputs.build_success }}" == "false" ]]; then
+            echo "### ❌ Build Failure" >> $GITHUB_STEP_SUMMARY
+            echo "Some builds failed. Check the individual workflow runs for details." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⏰ Timeout" >> $GITHUB_STEP_SUMMARY
+            echo "Builds are taking longer than expected. Check the Actions tab for current status." >> $GITHUB_STEP_SUMMARY
+          fi

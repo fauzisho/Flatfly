@@ -1,0 +1,365 @@
+name: 🚀 Auto Release
+
+on:
+  workflow_run:
+    workflows: 
+      - "📱 Build & Publish Android App"
+      - "🖥️ Build & Publish Desktop Apps" 
+      - "🌐 Deploy to GitHub Pages"
+    types:
+      - completed
+    branches: [main, master]
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+jobs:
+  check-workflows:
+    name: 🔍 Check All Workflows Success
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.version.outputs.version }}
+      
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🔍 Check All Required Workflows
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const requiredWorkflows = [
+              "📱 Build & Publish Android App",
+              "🖥️ Build & Publish Desktop Apps", 
+              "🌐 Deploy to GitHub Pages"
+            ];
+            
+            const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              status: 'completed',
+              per_page: 50,
+              head_sha: context.sha
+            });
+            
+            console.log(`Checking workflows for commit: ${context.sha}`);
+            
+            const workflowResults = {};
+            for (const run of runs.workflow_runs) {
+              if (requiredWorkflows.includes(run.name) && run.head_sha === context.sha) {
+                workflowResults[run.name] = run.conclusion;
+                console.log(`${run.name}: ${run.conclusion}`);
+              }
+            }
+            
+            const allSuccess = requiredWorkflows.every(workflow => 
+              workflowResults[workflow] === 'success'
+            );
+            
+            console.log(`All workflows successful: ${allSuccess}`);
+            console.log('Workflow results:', workflowResults);
+            
+            core.setOutput('should_release', allSuccess);
+            
+            return {
+              should_release: allSuccess,
+              workflows: workflowResults
+            };
+            
+      - name: 📝 Generate Version
+        id: version
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          # Get current date
+          DATE=$(date '+%Y-%m-%d')
+          TIME=$(date '+%H%M')
+          
+          # Get latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Extract version numbers
+          VERSION=$(echo $LATEST_TAG | sed 's/^v//')
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+          
+          # Increment patch version
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          NEW_TAG="v$NEW_VERSION"
+          
+          # Check if we should increment minor (if this is a significant release)
+          COMMITS_COUNT=$(git rev-list --count HEAD ^$LATEST_TAG 2>/dev/null || echo "1")
+          if [ "$COMMITS_COUNT" -gt 10 ]; then
+            NEW_MINOR=$((MINOR + 1))
+            NEW_VERSION="$MAJOR.$NEW_MINOR.0"
+            NEW_TAG="v$NEW_VERSION"
+          fi
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+          echo "commits_count=$COMMITS_COUNT" >> $GITHUB_OUTPUT
+          
+          echo "Generated version: $NEW_TAG"
+
+  create-release:
+    name: 🎉 Create Release
+    runs-on: ubuntu-latest
+    needs: check-workflows
+    if: needs.check-workflows.outputs.should_release == 'true'
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 📋 Download All Build Artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Get recent workflow runs
+            const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              status: 'completed',
+              per_page: 20,
+              head_sha: context.sha
+            });
+            
+            console.log(`Looking for artifacts from commit: ${context.sha}`);
+            
+            // Find the latest successful runs for each workflow
+            const workflowRuns = {};
+            for (const run of runs.workflow_runs) {
+              if (run.head_sha === context.sha && run.conclusion === 'success') {
+                const workflowName = run.name;
+                if (!workflowRuns[workflowName] || run.created_at > workflowRuns[workflowName].created_at) {
+                  workflowRuns[workflowName] = run;
+                }
+              }
+            }
+            
+            console.log('Found workflow runs:', Object.keys(workflowRuns));
+            
+            // Download artifacts from each workflow
+            for (const [workflowName, run] of Object.entries(workflowRuns)) {
+              try {
+                const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: run.id
+                });
+                
+                console.log(`${workflowName} has ${artifacts.artifacts.length} artifacts`);
+                
+                for (const artifact of artifacts.artifacts) {
+                  if (artifact.expired) continue;
+                  
+                  console.log(`Downloading artifact: ${artifact.name}`);
+                  
+                  const download = await github.rest.actions.downloadArtifact({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    artifact_id: artifact.id,
+                    archive_format: 'zip'
+                  });
+                  
+                  fs.writeFileSync(`${artifact.name}.zip`, Buffer.from(download.data));
+                }
+              } catch (error) {
+                console.log(`Error downloading artifacts for ${workflowName}:`, error.message);
+              }
+            }
+            
+      - name: 📦 Extract and Organize Artifacts
+        run: |
+          mkdir -p release-assets
+          
+          # Extract all downloaded artifacts
+          for zip_file in *.zip; do
+            if [ -f "$zip_file" ]; then
+              echo "Extracting $zip_file"
+              unzip -q "$zip_file" -d "extracted-$(basename "$zip_file" .zip)"
+            fi
+          done
+          
+          # Move files to release-assets with proper names
+          find extracted-* -type f \( -name "*.apk" -o -name "*.dmg" -o -name "*.msi" \) -exec cp {} release-assets/ \;
+          
+          # List what we have
+          echo "Release assets:"
+          ls -la release-assets/
+          
+      - name: 📝 Generate Release Notes
+        id: release_notes
+        run: |
+          VERSION="${{ needs.check-workflows.outputs.version }}"
+          DATE=$(date '+%Y-%m-%d')
+          
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"* %s (%h)" $LAST_TAG..HEAD | head -20)
+          else
+            COMMITS=$(git log --pretty=format:"* %s (%h)" -10)
+          fi
+          
+          # Count different types of changes
+          BUG_FIXES=$(echo "$COMMITS" | grep -i "fix\|bug\|patch" | head -10)
+          FEATURES=$(echo "$COMMITS" | grep -i "feat\|add\|new" | head -10)
+          OTHER_CHANGES=$(echo "$COMMITS" | grep -v -i "fix\|bug\|patch\|feat\|add\|new" | head -5)
+          
+          # Create release notes
+          cat > release_notes.md << EOF
+          ## 🚀 SaaS Template KMP v$VERSION ($DATE)
+          
+          ### 📦 Multi-Platform Release
+          This release includes applications for all major platforms:
+          - 📱 **Android**: APK files for mobile devices
+          - 🖥️ **Windows**: MSI installer for Windows 10/11
+          - 🍎 **macOS**: DMG disk image for macOS 11+
+          - 🌐 **Web**: Available at [GitHub Pages](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }})
+          
+          EOF
+          
+          if [ -n "$FEATURES" ]; then
+            echo "### ✨ Features" >> release_notes.md
+            echo "$FEATURES" >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+          
+          if [ -n "$BUG_FIXES" ]; then
+            echo "### 🐛 Bug Fixes" >> release_notes.md
+            echo "$BUG_FIXES" >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+          
+          if [ -n "$OTHER_CHANGES" ]; then
+            echo "### 🔧 Other Changes" >> release_notes.md
+            echo "$OTHER_CHANGES" >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+          
+          cat >> release_notes.md << EOF
+          ### 📋 Installation Instructions
+          
+          **📱 Android:**
+          1. Download the APK file for your device
+          2. Enable "Install from unknown sources" in Settings
+          3. Install the APK file
+          
+          **🖥️ Windows:**
+          1. Download the MSI installer
+          2. Run the installer and follow the setup wizard
+          3. Launch from Start Menu
+          
+          **🍎 macOS:**
+          1. Download the DMG file
+          2. Open the disk image and drag the app to Applications
+          3. Launch from Applications folder
+          
+          **🌐 Web:**
+          - Access directly at: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          
+          ### 🔧 System Requirements
+          - **Android**: 7.0+ (API level 24)
+          - **Windows**: Windows 10 version 1903 or later
+          - **macOS**: macOS 11.0 (Big Sur) or later
+          - **Web**: Modern browser with WebAssembly support
+          
+          ### 🎯 What's New in This Release
+          - Complete multi-platform support
+          - Automated CI/CD pipeline
+          - Signed APKs for Android
+          - Professional installers for desktop platforms
+          
+          ---
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ needs.check-workflows.outputs.version }}...v$VERSION
+          EOF
+          
+          # Set output
+          {
+            echo 'notes<<EOF'
+            cat release_notes.md
+            echo EOF
+          } >> $GITHUB_OUTPUT
+          
+      - name: 🚀 Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: "v${{ needs.check-workflows.outputs.version }}"
+          name: "SaaS Template KMP v${{ needs.check-workflows.outputs.version }}"
+          body: ${{ steps.release_notes.outputs.notes }}
+          artifacts: "release-assets/*"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: false
+          generateReleaseNotes: false
+          makeLatest: true
+          
+      - name: 🎯 Release Summary
+        run: |
+          echo "## 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | v${{ needs.check-workflows.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tag** | [v${{ needs.check-workflows.outputs.version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ needs.check-workflows.outputs.version }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release URL** | [View Release](https://github.com/${{ github.repository }}/releases/latest) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Web App** | [Live Demo](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Available Downloads:" >> $GITHUB_STEP_SUMMARY
+          
+          if ls release-assets/*.apk 1> /dev/null 2>&1; then
+            for apk in release-assets/*.apk; do
+              size=$(du -h "$apk" | cut -f1)
+              name=$(basename "$apk")
+              echo "- 📱 **$name** ($size)" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+          
+          if ls release-assets/*.msi 1> /dev/null 2>&1; then
+            for msi in release-assets/*.msi; do
+              size=$(du -h "$msi" | cut -f1)
+              name=$(basename "$msi")
+              echo "- 🪟 **$name** ($size)" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+          
+          if ls release-assets/*.dmg 1> /dev/null 2>&1; then
+            for dmg in release-assets/*.dmg; do
+              size=$(du -h "$dmg" | cut -f1)
+              name=$(basename "$dmg")
+              echo "- 🍎 **$name** ($size)" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎉 **Your multi-platform app is now available for download!**" >> $GITHUB_STEP_SUMMARY
+
+  notify-success:
+    name: 📢 Notify Release Success  
+    runs-on: ubuntu-latest
+    needs: [check-workflows, create-release]
+    if: always() && needs.create-release.result == 'success'
+    
+    steps:
+      - name: 📢 Success Notification
+        run: |
+          echo "🎉 RELEASE CREATED SUCCESSFULLY! 🎉"
+          echo ""
+          echo "Version: v${{ needs.check-workflows.outputs.version }}"
+          echo "Release URL: https://github.com/${{ github.repository }}/releases/latest"
+          echo "Web App: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          echo ""
+          echo "Your SaaS Template KMP Co-Pilot app is now available on all platforms!"

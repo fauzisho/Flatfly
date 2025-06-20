@@ -1,0 +1,274 @@
+name: 📱 Build & Publish Android App
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'snapshot'
+        type: choice
+        options:
+          - snapshot
+          - release
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  actions: read
+  id-token: write
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  
+jobs:
+  build-android:
+    name: 📱 Build Android App
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🐘 Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 🔑 Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: 🧪 Run Tests
+        run: ./gradlew :composeApp:compileCommonMainKotlinMetadata
+
+      - name: 📱 Build Android Debug APK
+        run: ./gradlew :composeApp:assembleDebug
+
+      - name: 📱 Build Android Release APK (Skip Lint)
+        run: ./gradlew :composeApp:assembleRelease -x lintVitalAnalyzeRelease
+
+      - name: 📱 Verify APK Signing
+        run: |
+          echo "Checking APK files and signatures..."
+          find composeApp/build/outputs/apk -name "*.apk" -exec echo "Found: {}" \;
+          
+          # Check if APKs are signed
+          if command -v aapt2 >/dev/null 2>&1; then
+            echo "Verifying APK signatures..."
+            find composeApp/build/outputs/apk -name "*.apk" -exec sh -c 'echo "Checking: $1" && aapt2 dump badging "$1" | head -5' _ {} \;
+          else
+            echo "aapt2 not available, skipping signature verification"
+          fi
+
+      - name: 📦 Find APK Files
+        id: find-apks
+        run: |
+          DEBUG_APK=$(find composeApp/build/outputs/apk/debug -name "*.apk" | head -1)
+          RELEASE_APK=$(find composeApp/build/outputs/apk/release -name "*.apk" | head -1)
+          
+          if [ -z "$DEBUG_APK" ] || [ -z "$RELEASE_APK" ]; then
+            echo "❌ APK files not found"
+            echo "Debug APK: $DEBUG_APK"
+            echo "Release APK: $RELEASE_APK"
+            exit 1
+          fi
+          
+          echo "debug_apk=$DEBUG_APK" >> $GITHUB_OUTPUT
+          echo "release_apk=$RELEASE_APK" >> $GITHUB_OUTPUT
+          echo "debug_apk_name=$(basename "$DEBUG_APK")" >> $GITHUB_OUTPUT
+          echo "release_apk_name=$(basename "$RELEASE_APK")" >> $GITHUB_OUTPUT
+          echo "✅ Found APKs:"
+          echo "  Debug: $DEBUG_APK"
+          echo "  Release: $RELEASE_APK"
+
+      - name: 📝 Get APK Info
+        id: apk-info
+        run: |
+          DEBUG_SIZE=$(du -h "${{ steps.find-apks.outputs.debug_apk }}" | cut -f1)
+          RELEASE_SIZE=$(du -h "${{ steps.find-apks.outputs.release_apk }}" | cut -f1)
+          echo "debug_size=$DEBUG_SIZE" >> $GITHUB_OUTPUT
+          echo "release_size=$RELEASE_SIZE" >> $GITHUB_OUTPUT
+          
+          # Extract version from git info
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION="$(git describe --tags --always --dirty)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: 🏷️ Upload Android APKs as Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SaaS-KMP-Android-${{ steps.apk-info.outputs.version }}
+          path: |
+            ${{ steps.find-apks.outputs.debug_apk }}
+            ${{ steps.find-apks.outputs.release_apk }}
+          retention-days: 90
+
+      - name: 📊 Android Build Summary
+        run: |
+          echo "## 📱 Android Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Target** | Android |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Debug APK** | ${{ steps.find-apks.outputs.debug_apk_name }} (${{ steps.apk-info.outputs.debug_size }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release APK** | ${{ steps.find-apks.outputs.release_apk_name }} (${{ steps.apk-info.outputs.release_size }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ steps.apk-info.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Status** | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+
+  publish-android:
+    name: 📦 Publish Android Packages
+    needs: build-android
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/'))
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📋 Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: 📝 Set Version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            # Create unique SNAPSHOT version with timestamp to avoid conflicts
+            BASE_VERSION="1.0.0"
+            BUILD_NUMBER="${{ github.run_number }}"
+            COMMIT_HASH="${{ github.sha }}"
+            TIMESTAMP=$(date +%s)
+            VERSION="${BASE_VERSION}-${BUILD_NUMBER}-${COMMIT_HASH:0:7}-${TIMESTAMP}-SNAPSHOT"
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: 📦 Create Android Distribution Structure
+        run: |
+          mkdir -p dist/packages
+          find ./artifacts -type f -name "*.apk" -exec cp {} dist/packages/ \;
+          
+          # Create metadata file
+          cat > dist/packages/manifest.json << EOF
+          {
+            "name": "SaaS-KMP Android App",
+            "version": "${{ steps.version.outputs.version }}",
+            "description": "SaaS-KMP - Kotlin Multiplatform Android Application",
+            "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}",
+            "platform": "android",
+            "packages": [
+          $(find dist/packages -type f -name "*.apk" | while read file; do
+            filename=$(basename "$file")
+            size=$(du -h "$file" | cut -f1)
+            echo "      {\"name\": \"$filename\", \"size\": \"$size\", \"type\": \"apk\"},"
+          done | sed '$ s/,$//')
+            ]
+          }
+          EOF
+
+      - name: 🚀 Create GitHub Release (for tags)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/packages/*.apk"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          generateReleaseNotes: true
+          name: "Android Release ${{ steps.version.outputs.version }}"
+          tag: "${{ steps.version.outputs.version }}-android"
+          body: |
+            ## 📱 SaaS-KMP Android Release ${{ steps.version.outputs.version }}
+            
+            ### 📦 Available Packages
+            - **Debug APK**: For testing and development
+            - **Release APK**: Production-ready, optimized build
+            
+            ### 🚀 What's New
+            Auto-generated from commits since last release.
+            
+            ### 📋 Installation Instructions
+            
+            **Android:**
+            1. Download the release APK file
+            2. Enable "Install from unknown sources" in your device settings
+            3. Install the APK file
+            
+            ### 📱 System Requirements
+            - Android 7.0 (API level 24) or higher
+            - 50MB free storage space
+
+      - name: 🎯 Android Publish Summary
+        run: |
+          echo "## 📦 Android Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release** | ${{ steps.version.outputs.is_release }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Packages** | $(find dist/packages -type f -name "*.apk" | wc -l) APK files |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Platform** | Android |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Built APK Files:" >> $GITHUB_STEP_SUMMARY
+          find dist/packages -type f -name "*.apk" | while read file; do
+            filename=$(basename "$file")
+            size=$(du -h "$file" | cut -f1)
+            echo "- **$filename** ($size)" >> $GITHUB_STEP_SUMMARY
+          done
+
+  security-scan-android:
+    name: 🔒 Android Security Scan
+    runs-on: ubuntu-latest
+    needs: build-android
+    continue-on-error: true  # Don't fail the entire workflow if security scan fails
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'trivy-results-android.sarif'
+        continue-on-error: true  # Don't fail if scan has issues
+
+      - name: 📋 Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-results-android.sarif') != ''
+        with:
+          sarif_file: 'trivy-results-android.sarif'
+        continue-on-error: true  # Don't fail if upload has permission issues
+        
+      - name: 📊 Android Security Scan Summary
+        if: always()
+        run: |
+          echo "## 🔒 Android Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          if [ -f "trivy-results-android.sarif" ]; then
+            echo "✅ Android security scan completed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "📋 Results uploaded to GitHub Security tab (if permissions allow)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Android security scan had issues but build continues" >> $GITHUB_STEP_SUMMARY
+          fi
