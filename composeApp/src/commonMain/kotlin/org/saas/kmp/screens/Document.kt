@@ -11,7 +11,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.*
@@ -22,9 +26,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 
 data class TaskItem(
@@ -47,62 +53,63 @@ fun getTaskIcon(taskTitle: String): ImageVector {
         taskTitle.contains("University", ignoreCase = true) -> Icons.Default.School
         taskTitle.contains("Account", ignoreCase = true) -> Icons.Default.AccountBalance
         taskTitle.contains("Insurance", ignoreCase = true) -> Icons.Default.Security
-        taskTitle.contains("CV", ignoreCase = true) || taskTitle.contains("Career", ignoreCase = true) -> Icons.Default.Work
+        taskTitle.contains("CV", ignoreCase = true) || taskTitle.contains(
+            "Career",
+            ignoreCase = true
+        ) -> Icons.Default.Work
+
         taskTitle.contains("Passport", ignoreCase = true) -> Icons.Default.Flight
-        taskTitle.contains("Housing", ignoreCase = true) || taskTitle.contains("Contract", ignoreCase = true) -> Icons.Default.Home
+        taskTitle.contains("Housing", ignoreCase = true) || taskTitle.contains(
+            "Contract",
+            ignoreCase = true
+        ) -> Icons.Default.Home
+
         taskTitle.contains("Certificate", ignoreCase = true) -> Icons.Default.VerifiedUser
         taskTitle.contains("Visa", ignoreCase = true) -> Icons.Default.CardMembership
         taskTitle.contains("Pet", ignoreCase = true) -> Icons.Default.Pets
         taskTitle.contains("Bank", ignoreCase = true) -> Icons.Default.AccountBalance
-        else -> Icons.Default.Assignment
-    }
-}
-
-// Function to get task category color
-fun getTaskCategoryColor(category: String): Color {
-    return when (category) {
-        "Completed" -> Color(0xFF4CAF50)
-        "In Progress" -> Color(0xFF2196F3)
-        "Not Started" -> Color(0xFF9E9E9E)
-        else -> Color.Gray
+        else -> Icons.AutoMirrored.Filled.Assignment
     }
 }
 
 @Composable
 fun DocumentScreen(
-    rootNavController: NavController,
+    @Suppress("UNUSED_PARAMETER") rootNavController: NavController,
     paddingValues: PaddingValues
 ) {
     var selectedTab by remember { mutableStateOf("All Tasks") }
     var isGridView by remember { mutableStateOf(false) }
-    
+    var showUploadDialog by remember { mutableStateOf(false) }
+    var selectedTask by remember { mutableStateOf<TaskItem?>(null) }
+    var showTaskDetailDialog by remember { mutableStateOf(false) }
+
     // Sample data
     val completedTasks = listOf(
         TaskItem("H1-2", "LOA University", 5, true),
         TaskItem("H1-3", "Block Account", 1, true),
         TaskItem("H1-4", "TK Insurance", 1, true),
-        TaskItem("H1-5", "CV Personal and Career", 3, true), // Added priority badge
+        TaskItem("H1-5", "CV Personal and Career", 3, true),
         TaskItem("H1-6", "Passport", 2, true)
     )
-    
+
     val inProgressTasks = listOf(
         TaskItem("HT-2", "Housing Insurance", 5),
         TaskItem("HT-3", "Schufa Certificate", 1),
         TaskItem("HT-4", "Visa Early", 1)
     )
-    
+
     val notStartedTasks = listOf(
         TaskItem("HT-2", "Housing Contract", 5),
         TaskItem("HT-3", "Pet Passport", 1),
         TaskItem("HT-4", "Local Bank Account", 1)
     )
-    
+
     val allCategories = listOf(
         TaskCategory("Completed", 5, completedTasks),
         TaskCategory("In Progress", 3, inProgressTasks),
         TaskCategory("Not Started", 3, notStartedTasks)
     )
-    
+
     // Filter categories based on selected tab
     val filteredCategories = when (selectedTab) {
         "All Tasks" -> allCategories
@@ -111,16 +118,16 @@ fun DocumentScreen(
         "Not Started" -> listOf(TaskCategory("Not Started", 3, notStartedTasks))
         else -> allCategories
     }
-    
+
     var categories by remember {
         mutableStateOf(allCategories)
     }
-    
+
     // Update categories when tab changes
     LaunchedEffect(selectedTab) {
         categories = filteredCategories.map { it.copy(isExpanded = true) }
     }
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -148,9 +155,29 @@ fun DocumentScreen(
                         .clickable { selectedTab = tab }
                 )
             }
-            
+
             Spacer(modifier = Modifier.weight(1f))
-            
+
+            // Magic Upload button
+            Button(
+                onClick = { showUploadDialog = true },
+                modifier = Modifier.height(32.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFB39DDB)
+                ),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "Magic Upload",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
             // View toggle buttons
             Row {
                 IconButton(
@@ -158,7 +185,7 @@ fun DocumentScreen(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        Icons.Default.List,
+                        Icons.AutoMirrored.Filled.List,
                         contentDescription = "List View",
                         tint = if (!isGridView) Color.Black else Color.Gray
                     )
@@ -175,12 +202,12 @@ fun DocumentScreen(
                 }
             }
         }
-        
+
         // Task list
         if (isGridView) {
             // Grid View - Use a single LazyVerticalGrid for all items
             LazyVerticalGrid(
-                columns = GridCells.Fixed(4), // Changed to 4 columns
+                columns = GridCells.Fixed(4),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -188,22 +215,28 @@ fun DocumentScreen(
             ) {
                 categories.forEach { category ->
                     // Category header
-                    item(span = { GridItemSpan(4) }) { // Span all 4 columns
+                    item(span = { GridItemSpan(4) }) {
                         TaskCategoryHeader(
                             category = category,
                             onToggleExpanded = { categoryTitle ->
-                                categories = categories.map { 
-                                    if (it.title == categoryTitle) it.copy(isExpanded = !it.isExpanded) 
-                                    else it 
+                                categories = categories.map {
+                                    if (it.title == categoryTitle) it.copy(isExpanded = !it.isExpanded)
+                                    else it
                                 }
                             }
                         )
                     }
-                    
+
                     // Category items
                     if (category.isExpanded) {
                         items(category.items) { task ->
-                            TaskGridCard(task = task)
+                            TaskGridCard(
+                                task = task,
+                                onClick = {
+                                    selectedTask = task
+                                    showTaskDetailDialog = true
+                                }
+                            )
                         }
                     }
                 }
@@ -219,11 +252,91 @@ fun DocumentScreen(
                     TaskCategorySection(
                         category = category,
                         onToggleExpanded = { categoryTitle ->
-                            categories = categories.map { 
-                                if (it.title == categoryTitle) it.copy(isExpanded = !it.isExpanded) 
-                                else it 
+                            categories = categories.map {
+                                if (it.title == categoryTitle) it.copy(isExpanded = !it.isExpanded)
+                                else it
                             }
+                        },
+                        onTaskClick = { task ->
+                            selectedTask = task
+                            showTaskDetailDialog = true
                         }
+                    )
+                }
+            }
+        }
+    }
+
+    // Upload Dialog
+    if (showUploadDialog) {
+        FileUploadDialog(
+            onDismiss = { showUploadDialog = false },
+            onFileSelected = { _ ->
+                // Handle file selection here
+                showUploadDialog = false
+                // You can add logic to process the uploaded file
+            }
+        )
+    }
+
+    // Task Detail Dialog
+    if (showTaskDetailDialog && selectedTask != null) {
+        TaskDetailDialog(
+            task = selectedTask!!,
+            onDismiss = {
+                showTaskDetailDialog = false
+                selectedTask = null
+            },
+            onTaskUpdate = { updatedTask ->
+                // Update the task in the categories
+                categories = categories.map { category ->
+                    category.copy(
+                        items = category.items.map { task ->
+                            if (task.id == updatedTask.id) updatedTask else task
+                        }
+                    )
+                }
+                showTaskDetailDialog = false
+                selectedTask = null
+            },
+            onTaskDelete = { taskId ->
+                // Remove the task from categories
+                categories = categories.map { category ->
+                    category.copy(
+                        items = category.items.filter { it.id != taskId },
+                        count = category.items.filter { it.id != taskId }.size
+                    )
+                }
+                showTaskDetailDialog = false
+                selectedTask = null
+            }
+        )
+    }
+}
+
+@Composable
+fun TaskCategorySection(
+    category: TaskCategory,
+    onToggleExpanded: (String) -> Unit,
+    onTaskClick: (TaskItem) -> Unit
+) {
+    Column {
+        // Category header
+        TaskCategoryHeader(
+            category = category,
+            onToggleExpanded = onToggleExpanded
+        )
+
+        // Category items
+        if (category.isExpanded) {
+            Column(
+                modifier = Modifier.padding(start = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                category.items.forEach { task ->
+                    TaskItemRow(
+                        task = task,
+                        onClick = { onTaskClick(task) }
                     )
                 }
             }
@@ -232,95 +345,17 @@ fun DocumentScreen(
 }
 
 @Composable
-fun TaskCategorySection(
-    category: TaskCategory,
-    onToggleExpanded: (String) -> Unit
+fun TaskItemRow(
+    task: TaskItem,
+    onClick: () -> Unit
 ) {
-    Column {
-        // Category header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = { onToggleExpanded(category.title) },
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    if (category.isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (category.isExpanded) "Collapse" else "Expand",
-                    tint = Color.Gray
-                )
-            }
-            
-            Icon(
-                if (category.title == "Completed") Icons.Default.TaskAlt else Icons.Outlined.Circle,
-                contentDescription = null,
-                tint = Color.Gray,
-                modifier = Modifier.size(20.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            Text(
-                text = category.title,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black
-            )
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            Text(
-                text = category.count.toString(),
-                color = Color.Gray,
-                fontSize = 14.sp
-            )
-        }
-        
-        // Category items
-        if (category.isExpanded) {
-            Column(
-                modifier = Modifier.padding(start = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                category.items.forEach { task ->
-                    TaskItemRow(task = task)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TaskItemRow(task: TaskItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Task indicator
-        Icon(
-            Icons.Default.RadioButtonUnchecked,
-            contentDescription = null,
-            tint = Color.Gray,
-            modifier = Modifier.size(16.dp)
-        )
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
-        // Task ID
-        Text(
-            text = task.id,
-            color = Color.Gray,
-            fontSize = 14.sp,
-            modifier = Modifier.width(40.dp)
-        )
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
         // Task status icon
         Icon(
             if (task.isCompleted) Icons.Default.TaskAlt else Icons.Default.RadioButtonUnchecked,
@@ -328,9 +363,19 @@ fun TaskItemRow(task: TaskItem) {
             tint = Color.Gray,
             modifier = Modifier.size(16.dp)
         )
-        
+
         Spacer(modifier = Modifier.width(12.dp))
-        
+
+        // Task ID
+        Text(
+            text = task.id,
+            color = Color.Gray,
+            fontSize = 14.sp,
+            modifier = Modifier.width(40.dp)
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
         // Task title
         Text(
             text = task.title,
@@ -338,13 +383,13 @@ fun TaskItemRow(task: TaskItem) {
             fontSize = 14.sp,
             modifier = Modifier.weight(1f)
         )
-        
+
         // Priority badge
         if (task.priority > 0) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFB39DDB)) // Soft purple color
+                    .background(Color(0xFFB39DDB))
                     .padding(horizontal = 8.dp, vertical = 2.dp)
             ) {
                 Text(
@@ -379,24 +424,24 @@ fun TaskCategoryHeader(
                 tint = Color.Gray
             )
         }
-        
+
         Icon(
             if (category.title == "Completed") Icons.Default.TaskAlt else Icons.Outlined.Circle,
             contentDescription = null,
             tint = Color.Gray,
             modifier = Modifier.size(20.dp)
         )
-        
+
         Spacer(modifier = Modifier.width(8.dp))
-        
+
         Text(
             text = category.title,
             fontWeight = FontWeight.Medium,
             color = Color.Black
         )
-        
+
         Spacer(modifier = Modifier.width(8.dp))
-        
+
         Text(
             text = category.count.toString(),
             color = Color.Gray,
@@ -406,78 +451,18 @@ fun TaskCategoryHeader(
 }
 
 @Composable
-fun TaskCategoryGridSection(
-    category: TaskCategory,
-    onToggleExpanded: (String) -> Unit
+fun TaskGridCard(
+    task: TaskItem,
+    onClick: () -> Unit
 ) {
-    Column {
-        // Category header (same as list view)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = { onToggleExpanded(category.title) },
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    if (category.isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (category.isExpanded) "Collapse" else "Expand",
-                    tint = Color.Gray
-                )
-            }
-            
-            Icon(
-                if (category.title == "Completed") Icons.Default.TaskAlt else Icons.Outlined.Circle,
-                contentDescription = null,
-                tint = Color.Gray,
-                modifier = Modifier.size(20.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            Text(
-                text = category.title,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black
-            )
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            Text(
-                text = category.count.toString(),
-                color = Color.Gray,
-                fontSize = 14.sp
-            )
-        }
-        
-        // Category items in grid
-        if (category.isExpanded) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.padding(start = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(category.items) { task ->
-                    TaskGridCard(task = task)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TaskGridCard(task: TaskItem) {
     val taskIcon = getTaskIcon(task.title)
     val statusColor = if (task.isCompleted) Color(0xFF4CAF50) else Color(0xFF2196F3)
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.85f),
+            .aspectRatio(0.85f)
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
@@ -487,7 +472,6 @@ fun TaskGridCard(task: TaskItem) {
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Priority badge in top-right corner
             if (task.priority > 0) {
                 Box(
                     modifier = Modifier
@@ -505,8 +489,7 @@ fun TaskGridCard(task: TaskItem) {
                     )
                 }
             }
-            
-            // Main content - using Column with SpaceBetween to eliminate gaps
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -514,20 +497,17 @@ fun TaskGridCard(task: TaskItem) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top spacer for priority badge
                 if (task.priority > 0) {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                
-                // Top content group
+
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Icon with background circle - 2x bigger
                     Box(
                         modifier = Modifier
-                            .size(80.dp) // 2x bigger (was 40dp)
+                            .size(80.dp)
                             .clip(CircleShape)
                             .background(statusColor.copy(alpha = 0.1f)),
                         contentAlignment = Alignment.Center
@@ -536,56 +516,563 @@ fun TaskGridCard(task: TaskItem) {
                             imageVector = taskIcon,
                             contentDescription = null,
                             tint = statusColor,
-                            modifier = Modifier.size(40.dp) // 2x bigger (was 20dp)
+                            modifier = Modifier.size(40.dp)
                         )
                     }
-                    
-                    // Task ID - 2x bigger
+
                     Text(
                         text = task.id,
                         color = Color.Gray,
-                        fontSize = 20.sp, // 2x bigger (was 10sp)
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Medium
                     )
-                    
-                    // Task title - 2x bigger
+
                     Text(
                         text = task.title,
                         color = Color.Black,
-                        fontSize = 24.sp, // 2x bigger (was 12sp)
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        lineHeight = 28.sp // 2x bigger (was 14sp)
+                        textAlign = TextAlign.Center,
+                        lineHeight = 28.sp
                     )
                 }
-                
-                // Status indicator at bottom - 2x bigger
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp)) // 2x bigger (was 6dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(statusColor.copy(alpha = 0.1f))
-                        .padding(vertical = 12.dp) // 2x bigger (was 6dp)
+                        .padding(vertical = 12.dp)
                 ) {
                     Icon(
                         if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.Schedule,
                         contentDescription = null,
                         tint = statusColor,
-                        modifier = Modifier.size(24.dp) // 2x bigger (was 12dp)
+                        modifier = Modifier.size(24.dp)
                     )
-                    
-                    Spacer(modifier = Modifier.width(8.dp)) // 2x bigger (was 4dp)
-                    
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Text(
                         text = if (task.isCompleted) "Completed" else "Pending",
                         color = statusColor,
-                        fontSize = 20.sp, // 2x bigger (was 10sp)
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Medium
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FileUploadDialog(
+    onDismiss: () -> Unit,
+    onFileSelected: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Upload Document",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Upload area that mimics the drag & drop design
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clickable { onFileSelected("document.pdf") },
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFF8F9FA)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(
+                        2.dp,
+                        Color(0xFFE3E8ED)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudUpload,
+                            contentDescription = null,
+                            tint = Color(0xFF6C757D),
+                            modifier = Modifier.size(48.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "Drag&Drop files here",
+                            color = Color(0xFF495057),
+                            fontSize = 16.sp
+                        )
+
+                        Text(
+                            text = "or",
+                            color = Color(0xFF6C757D),
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+
+                        Button(
+                            onClick = { onFileSelected("selected_document.pdf") },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF6C63FF)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Browse",
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Supported formats: PDF, DOC, DOCX, JPG, PNG",
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "Cancel",
+                    color = Color.Gray
+                )
+            }
+        },
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+@Composable
+fun TaskDetailDialog(
+    task: TaskItem,
+    onDismiss: () -> Unit,
+    onTaskUpdate: (TaskItem) -> Unit,
+    onTaskDelete: (String) -> Unit
+) {
+    val editedTask by remember { mutableStateOf(task) }
+    val description by remember { mutableStateOf("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.") }
+    val notes by remember { mutableStateOf("Initial setup completed. Waiting for documentation review.") }
+    val dueDate by remember { mutableStateOf("2024-12-31") }
+    val progress by remember { mutableStateOf(if (task.isCompleted) 100f else 65f) }
+
+    val attachedFiles = remember {
+        listOf(
+            "university_application.pdf",
+            "transcript.pdf",
+            "passport_copy.jpg"
+        )
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .fillMaxHeight(0.8f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = editedTask.title,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Text(
+                            text = "Task ID: ${editedTask.id}",
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.Gray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Status and Priority Row
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Status
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Status",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Black
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = when {
+                                            editedTask.isCompleted -> Color(0xFF4CAF50).copy(alpha = 0.1f)
+                                            else -> Color(0xFF2196F3).copy(alpha = 0.1f)
+                                        }
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            if (editedTask.isCompleted) Icons.Default.CheckCircle else Icons.Default.Schedule,
+                                            contentDescription = null,
+                                            tint = if (editedTask.isCompleted) Color(0xFF4CAF50) else Color(
+                                                0xFF2196F3
+                                            ),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = if (editedTask.isCompleted) "Completed" else "In Progress",
+                                            color = if (editedTask.isCompleted) Color(0xFF4CAF50) else Color(
+                                                0xFF2196F3
+                                            ),
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Priority
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Priority",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Black
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                if (editedTask.priority > 0) {
+                                    Card(
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = Color(0xFFB39DDB).copy(alpha = 0.1f)
+                                        ),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "Priority ${editedTask.priority}",
+                                            modifier = Modifier.padding(12.dp),
+                                            color = Color(0xFFB39DDB),
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = "No priority set",
+                                        color = Color.Gray,
+                                        fontSize = 14.sp,
+                                        modifier = Modifier.padding(vertical = 12.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Progress
+                    item {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Progress",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "${progress.toInt()}%",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF2196F3)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { progress / 100f },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = Color(0xFF2196F3),
+                                trackColor = Color(0xFF2196F3).copy(alpha = 0.1f)
+                            )
+                        }
+                    }
+
+                    // Due Date
+                    item {
+                        Column {
+                            Text(
+                                text = "Due Date",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFFF5F5F5)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.CalendarToday,
+                                        contentDescription = null,
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = dueDate,
+                                        color = Color.Black
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Description
+                    item {
+                        Column {
+                            Text(
+                                text = "Description",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFFF5F5F5)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = description,
+                                    modifier = Modifier.padding(12.dp),
+                                    color = Color.Black,
+                                    lineHeight = 20.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // Attached Files
+                    item {
+                        Column {
+                            Text(
+                                text = "Attached Files",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            attachedFiles.forEach { fileName ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 2.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(0xFFF5F5F5)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Icon(
+                                            when {
+                                                fileName.endsWith(".pdf") -> Icons.Default.PictureAsPdf
+                                                fileName.endsWith(".jpg") || fileName.endsWith(".png") -> Icons.Default.Image
+                                                else -> Icons.AutoMirrored.Filled.InsertDriveFile
+                                            },
+                                            contentDescription = null,
+                                            tint = Color(0xFF2196F3),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = fileName,
+                                            modifier = Modifier.weight(1f),
+                                            color = Color.Black
+                                        )
+                                        IconButton(
+                                            onClick = { /* Download file */ },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Download,
+                                                contentDescription = "Download",
+                                                tint = Color.Gray,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Add file button
+                            OutlinedButton(
+                                onClick = { /* Add file */ },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, Color(0xFF2196F3).copy(alpha = 0.5f))
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = Color(0xFF2196F3),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Add File",
+                                    color = Color(0xFF2196F3)
+                                )
+                            }
+                        }
+                    }
+
+                    // Notes
+                    item {
+                        Column {
+                            Text(
+                                text = "Notes",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFFF5F5F5)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = notes,
+                                    modifier = Modifier.padding(12.dp),
+                                    color = Color.Black,
+                                    lineHeight = 20.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { onTaskDelete(task.id) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(),
+                        border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = Color.Red,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Delete",
+                            color = Color.Red
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            val updatedTask = editedTask.copy(
+                                isCompleted = !editedTask.isCompleted
+                            )
+                            onTaskUpdate(updatedTask)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (editedTask.isCompleted) Color(0xFFFF9800) else Color(
+                                0xFF4CAF50
+                            )
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            if (editedTask.isCompleted) Icons.Default.Refresh else Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (editedTask.isCompleted) "Mark Incomplete" else "Mark Complete"
+                        )
+                    }
                 }
             }
         }
