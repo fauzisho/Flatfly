@@ -15,12 +15,16 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import org.saas.kmp.auth.AuthManager
 import org.saas.kmp.navigation.BottomNavigationBar
+import org.saas.kmp.navigation.Graph
 import org.saas.kmp.navigation.NavigationItem
 import org.saas.kmp.navigation.NavigationSideBar
 import org.saas.kmp.navigation.graph.RootNavGraph
@@ -47,26 +51,33 @@ fun MainScreen() {
             navigationItemsLists.find { it.route == currentRoute }
         }
     }
-    val isMainScreenVisible by remember(isMediumExpandedWWSC) {
+    val isMainScreenVisible by remember(isMediumExpandedWWSC, currentRoute) {
         derivedStateOf {
-            navigationItem != null
+            navigationItem != null && AuthManager.isLoggedIn
         }
     }
-    val isBottomBarVisible by remember(isMediumExpandedWWSC) {
+    
+    // State to control dialog visibility and hide bottom navigation
+    var isDialogVisible by remember { mutableStateOf(false) }
+    
+    val isBottomBarVisible by remember(isMediumExpandedWWSC, isDialogVisible, currentRoute) {
         derivedStateOf {
             if (!isMediumExpandedWWSC) {
-                navigationItem != null
+                navigationItem != null && !isDialogVisible && AuthManager.isLoggedIn
             } else {
                 false
             }
         }
     }
+    
     MainScaffold(
         rootNavController = rootNavController,
         currentRoute = currentRoute,
         isMediumExpandedWWSC = isMediumExpandedWWSC,
         isBottomBarVisible = isBottomBarVisible,
         isMainScreenVisible = isMainScreenVisible,
+        isDialogVisible = isDialogVisible,
+        onDialogVisibilityChange = { isVisible -> isDialogVisible = isVisible },
         onItemClick = { currentNavigationItem ->
             rootNavController.navigate(currentNavigationItem.route) {
                 // Pop up to the start destination of the graph to
@@ -96,6 +107,8 @@ fun MainScaffold(
     isMediumExpandedWWSC: Boolean,
     isBottomBarVisible: Boolean,
     isMainScreenVisible: Boolean,
+    isDialogVisible: Boolean,
+    onDialogVisibilityChange: (Boolean) -> Unit,
     onItemClick: (NavigationItem) -> Unit,
 ) {
     Row {
@@ -144,6 +157,7 @@ fun MainScaffold(
             RootNavGraph(
                 rootNavController = rootNavController,
                 innerPadding = innerPadding,
+                onDialogVisibilityChange = onDialogVisibilityChange
             )
         }
     }

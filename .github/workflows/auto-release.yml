@@ -278,12 +278,6 @@ jobs:
           - **macOS**: macOS 11.0 (Big Sur) or later
           - **Web**: Modern browser with WebAssembly support
           
-          ### 🎯 What's New in This Release
-          - Complete multi-platform support
-          - Automated CI/CD pipeline
-          - Signed APKs for Android
-          - Professional installers for desktop platforms
-          
           ---
           **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ needs.check-workflows.outputs.version }}...v$VERSION
           EOF

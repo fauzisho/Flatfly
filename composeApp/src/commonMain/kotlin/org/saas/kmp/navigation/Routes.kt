@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.AccountCircle
 
 object Graph {
     const val NAVIGATION_BAR_SCREEN_GRAPH = "navigationBarScreenGraph"
+    const val AUTH_GRAPH = "authGraph"
 }
 
 sealed class Routes(var route: String) {
@@ -26,6 +27,10 @@ sealed class Routes(var route: String) {
     data object Account : Routes("account")
     data object HomeDetail : Routes("homeDetail")
     data object SettingDetail : Routes("settingDetail")
+    
+    // Auth routes
+    data object Login : Routes("login")
+    data object SignUp : Routes("signup")
 }
 
 val navigationItemsLists = listOf(
@@ -44,7 +49,7 @@ val navigationItemsLists = listOf(
     NavigationItem(
         unSelectedIcon = Icons.Outlined.Hotel,
         selectedIcon = Icons.Filled.Hotel,
-        title = "Residence",
+        title = "Housing",
         route = Routes.Residence.route,
     ),
     NavigationItem(
