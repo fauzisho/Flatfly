@@ -26,7 +26,7 @@ kotlin {
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "ComposeApp"
+            baseName = "FlatFly"
             isStatic = true
         }
     }
@@ -73,6 +73,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -121,8 +122,19 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.saas.kmp"
+            packageName = "FlatFly"
             packageVersion = "1.0.0"
+            
+            // Icon configurations for different platforms
+            macOS {
+                iconFile.set(project.file("src/desktopMain/resources/icon.icns"))
+            }
+            windows {
+                iconFile.set(project.file("src/desktopMain/resources/icon.ico"))
+            }
+            linux {
+                iconFile.set(project.file("src/desktopMain/resources/icon.png"))
+            }
         }
     }
 }

@@ -40,7 +40,11 @@ fun NavGraphBuilder.mainNavGraph(
             )
         }
         composable(route = Routes.BuddyHelp.route) {
-            BuddyHelpScreen(rootNavController = rootNavController, paddingValues = innerPadding)
+            BuddyHelpScreen(
+                rootNavController = rootNavController, 
+                paddingValues = innerPadding,
+                onDialogVisibilityChange = onDialogVisibilityChange
+            )
         }
         composable(route = Routes.Account.route) {
             AccountScreen(rootNavController = rootNavController, paddingValues = innerPadding)
