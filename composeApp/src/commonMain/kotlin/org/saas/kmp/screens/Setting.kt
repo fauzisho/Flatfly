@@ -24,6 +24,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import org.saas.kmp.auth.AuthManager
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import saaskmp.composeapp.generated.resources.Res
+import saaskmp.composeapp.generated.resources.user_placeholder
+import org.jetbrains.compose.resources.painterResource
 
 // Data classes for account features
 data class UserAccount(
@@ -51,16 +57,31 @@ data class MenuItem(
 @Composable
 fun AccountScreen(
     rootNavController: NavController,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    onLogout: () -> Unit = {}
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showEditProfile by remember { mutableStateOf(false) }
     var notificationsEnabled by remember { mutableStateOf(true) }
     var darkModeEnabled by remember { mutableStateOf(false) }
 
-    // Sample user data
-    val user = remember {
-        UserAccount(
+    // Get current user from AuthManager
+    val currentUser = AuthManager.currentUser
+
+    // Sample user data or use current user from AuthManager
+    val user = remember(currentUser) {
+        currentUser?.let {
+            UserAccount(
+                name = it.name,
+                email = it.email,
+                avatar = it.avatar,
+                memberSince = it.memberSince,
+                country = "Germany",
+                countryFlag = "🇩🇪",
+                isVerified = true,
+                isPremium = false
+            )
+        } ?: UserAccount(
             name = "John Doe",
             email = "john.doe@example.com",
             avatar = "👨‍💼",
@@ -279,7 +300,8 @@ fun AccountScreen(
                 TextButton(
                     onClick = {
                         showLogoutDialog = false
-                        // Handle logout
+                        AuthManager.logout()
+                        onLogout()
                     }
                 ) {
                     Text("Sign Out", color = Color(0xFFE91E63))
@@ -340,9 +362,13 @@ fun ProfileHeader(
                         .border(3.dp, Color(0xFF2196F3).copy(alpha = 0.3f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = user.avatar,
-                        fontSize = 32.sp
+                    Image(
+                        painter = painterResource(Res.drawable.user_placeholder),
+                        contentDescription = "User Avatar",
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
                     )
                 }
                 

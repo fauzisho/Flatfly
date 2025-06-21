@@ -22,7 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import org.saas.kmp.auth.AuthManager
 import org.saas.kmp.navigation.BottomNavigationBar
+import org.saas.kmp.navigation.Graph
 import org.saas.kmp.navigation.NavigationItem
 import org.saas.kmp.navigation.NavigationSideBar
 import org.saas.kmp.navigation.graph.RootNavGraph
@@ -49,19 +51,19 @@ fun MainScreen() {
             navigationItemsLists.find { it.route == currentRoute }
         }
     }
-    val isMainScreenVisible by remember(isMediumExpandedWWSC) {
+    val isMainScreenVisible by remember(isMediumExpandedWWSC, currentRoute) {
         derivedStateOf {
-            navigationItem != null
+            navigationItem != null && AuthManager.isLoggedIn
         }
     }
     
     // State to control dialog visibility and hide bottom navigation
     var isDialogVisible by remember { mutableStateOf(false) }
     
-    val isBottomBarVisible by remember(isMediumExpandedWWSC, isDialogVisible) {
+    val isBottomBarVisible by remember(isMediumExpandedWWSC, isDialogVisible, currentRoute) {
         derivedStateOf {
             if (!isMediumExpandedWWSC) {
-                navigationItem != null && !isDialogVisible
+                navigationItem != null && !isDialogVisible && AuthManager.isLoggedIn
             } else {
                 false
             }

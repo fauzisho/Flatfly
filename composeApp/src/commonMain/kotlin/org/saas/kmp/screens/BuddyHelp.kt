@@ -26,6 +26,11 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import kotlinx.datetime.*
 import kotlin.random.Random
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import saaskmp.composeapp.generated.resources.Res
+import saaskmp.composeapp.generated.resources.user_placeholder
+import org.jetbrains.compose.resources.painterResource
 
 // Helper function to generate random IDs for KMP compatibility
 fun generateRandomId(): String {
@@ -258,10 +263,21 @@ fun ChatContactItem(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = contact.avatar,
-                    fontSize = 24.sp
-                )
+                if (contact.isAI) {
+                    Text(
+                        text = contact.avatar,
+                        fontSize = 24.sp
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(Res.drawable.user_placeholder),
+                        contentDescription = "User Avatar",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
             
             // Online indicator
@@ -444,10 +460,21 @@ fun ChatRoomScreen(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = contact.avatar,
-                            fontSize = 18.sp
-                        )
+                        if (contact.isAI) {
+                            Text(
+                                text = contact.avatar,
+                                fontSize = 18.sp
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(Res.drawable.user_placeholder),
+                                contentDescription = "User Avatar",
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                     }
                     
                     if (contact.isOnline) {
