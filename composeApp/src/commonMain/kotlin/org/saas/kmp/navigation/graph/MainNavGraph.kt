@@ -15,7 +15,8 @@ import org.saas.kmp.screens.BuddyHelpScreen
 
 fun NavGraphBuilder.mainNavGraph(
     rootNavController: NavHostController,
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
+    onDialogVisibilityChange: (Boolean) -> Unit
 ) {
     navigation(
         startDestination = Routes.Home.route,
@@ -25,10 +26,18 @@ fun NavGraphBuilder.mainNavGraph(
             HomeScreen(rootNavController = rootNavController, paddingValues = innerPadding)
         }
         composable(route = Routes.Document.route) {
-            DocumentScreen(rootNavController = rootNavController, paddingValues = innerPadding)
+            DocumentScreen(
+                rootNavController = rootNavController, 
+                paddingValues = innerPadding,
+                onDialogVisibilityChange = onDialogVisibilityChange
+            )
         }
         composable(route = Routes.Residence.route) {
-            ResidenceScreen(rootNavController = rootNavController, paddingValues = innerPadding)
+            ResidenceScreen(
+                rootNavController = rootNavController, 
+                paddingValues = innerPadding,
+                onDialogVisibilityChange = onDialogVisibilityChange
+            )
         }
         composable(route = Routes.BuddyHelp.route) {
             BuddyHelpScreen(rootNavController = rootNavController, paddingValues = innerPadding)
@@ -37,5 +46,4 @@ fun NavGraphBuilder.mainNavGraph(
             AccountScreen(rootNavController = rootNavController, paddingValues = innerPadding)
         }
     }
-
 }

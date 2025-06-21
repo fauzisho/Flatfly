@@ -9,13 +9,17 @@ import org.saas.kmp.navigation.Graph
 @Composable
 fun RootNavGraph(
     rootNavController: NavHostController,
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
+    onDialogVisibilityChange: (Boolean) -> Unit
 ) {
     NavHost(
         navController = rootNavController,
         startDestination = Graph.NAVIGATION_BAR_SCREEN_GRAPH,
     ) {
-        mainNavGraph(rootNavController = rootNavController, innerPadding = innerPadding)
-
+        mainNavGraph(
+            rootNavController = rootNavController, 
+            innerPadding = innerPadding,
+            onDialogVisibilityChange = onDialogVisibilityChange
+        )
     }
 }

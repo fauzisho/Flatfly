@@ -76,7 +76,8 @@ fun getTaskIcon(taskTitle: String): ImageVector {
 @Composable
 fun DocumentScreen(
     @Suppress("UNUSED_PARAMETER") rootNavController: NavController,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    onDialogVisibilityChange: (Boolean) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf("All Tasks") }
     var isGridView by remember { mutableStateOf(false) }
@@ -291,11 +292,18 @@ fun DocumentScreen(
 
     // Task Detail Dialog
     if (showTaskDetailDialog && selectedTask != null) {
+        // Hide bottom navigation when dialog is shown
+        LaunchedEffect(Unit) {
+            onDialogVisibilityChange(true)
+        }
+        
         TaskDetailDialog(
             task = selectedTask!!,
             onDismiss = {
                 showTaskDetailDialog = false
                 selectedTask = null
+                // Show bottom navigation when dialog is closed
+                onDialogVisibilityChange(false)
             },
             onTaskUpdate = { updatedTask ->
                 // Update the task in the categories
@@ -308,6 +316,8 @@ fun DocumentScreen(
                 }
                 showTaskDetailDialog = false
                 selectedTask = null
+                // Show bottom navigation when dialog is closed
+                onDialogVisibilityChange(false)
             },
             onTaskDelete = { taskId ->
                 // Remove the task from categories
@@ -319,6 +329,8 @@ fun DocumentScreen(
                 }
                 showTaskDetailDialog = false
                 selectedTask = null
+                // Show bottom navigation when dialog is closed
+                onDialogVisibilityChange(false)
             }
         )
     }
@@ -698,181 +710,66 @@ fun TaskDetailDialog(
         )
     }
 
-    Dialog(
-        onDismissRequest = onDismiss
+    // Full screen overlay
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.98f)
-                .fillMaxHeight(0.85f),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
+            // Header with status bar padding
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 40.dp) // Add status bar padding
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header with minimal horizontal padding
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = editedTask.title,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = "Task ID: ${editedTask.id}",
-                            fontSize = 13.sp,
-                            color = Color.Gray,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                    }
-
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.Gray,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = editedTask.title,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "Task ID: ${editedTask.id}",
+                        fontSize = 13.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
                 }
 
-                // Content with minimal horizontal padding
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Status and Priority Row
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Status
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Status",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.Black
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Card(
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = when {
-                                            editedTask.isCompleted -> Color(0xFF4CAF50).copy(alpha = 0.1f)
-                                            else -> Color(0xFF2196F3).copy(alpha = 0.1f)
-                                        }
-                                    ),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            if (editedTask.isCompleted) Icons.Default.CheckCircle else Icons.Default.Schedule,
-                                            contentDescription = null,
-                                            tint = if (editedTask.isCompleted) Color(0xFF4CAF50) else Color(
-                                                0xFF2196F3
-                                            ),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = if (editedTask.isCompleted) "Completed" else "In Progress",
-                                            color = if (editedTask.isCompleted) Color(0xFF4CAF50) else Color(
-                                                0xFF2196F3
-                                            ),
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                }
-                            }
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
 
-                            // Priority
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Priority",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.Black
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                if (editedTask.priority > 0) {
-                                    Card(
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = Color(0xFF03A9F4).copy(alpha = 0.1f)
-                                        ),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text(
-                                            text = "Priority ${editedTask.priority}",
-                                            modifier = Modifier.padding(10.dp),
-                                            color = Color(0xFF03A9F4),
-                                            fontWeight = FontWeight.Medium,
-                                            fontSize = 13.sp
-                                        )
-                                    }
-                                } else {
-                                    Text(
-                                        text = "No priority set",
-                                        color = Color.Gray,
-                                        fontSize = 14.sp,
-                                        modifier = Modifier.padding(vertical = 10.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Progress
-                    item {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Progress",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.Black
-                                )
-                                Text(
-                                    text = "${progress.toInt()}%",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF2196F3)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LinearProgressIndicator(
-                                progress = { progress / 100f },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp)),
-                                color = Color(0xFF2196F3),
-                                trackColor = Color(0xFF2196F3).copy(alpha = 0.1f)
-                            )
-                        }
-                    }
-
-                    // Due Date
-                    item {
-                        Column {
+            // Content
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Status and Priority Row
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Status
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Due Date",
+                                text = "Status",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color.Black
@@ -880,7 +777,10 @@ fun TaskDetailDialog(
                             Spacer(modifier = Modifier.height(8.dp))
                             Card(
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFF5F5F5)
+                                    containerColor = when {
+                                        editedTask.isCompleted -> Color(0xFF4CAF50).copy(alpha = 0.1f)
+                                        else -> Color(0xFF2196F3).copy(alpha = 0.1f)
+                                    }
                                 ),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
@@ -890,206 +790,317 @@ fun TaskDetailDialog(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Icon(
-                                        Icons.Default.CalendarToday,
+                                        if (editedTask.isCompleted) Icons.Default.CheckCircle else Icons.Default.Schedule,
                                         contentDescription = null,
-                                        tint = Color.Gray,
-                                        modifier = Modifier.size(16.dp)
+                                        tint = if (editedTask.isCompleted) Color(0xFF4CAF50) else Color(
+                                            0xFF2196F3
+                                        ),
+                                        modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        text = dueDate,
-                                        color = Color.Black
+                                        text = if (editedTask.isCompleted) "Completed" else "In Progress",
+                                        color = if (editedTask.isCompleted) Color(0xFF4CAF50) else Color(
+                                            0xFF2196F3
+                                        ),
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
                             }
                         }
-                    }
 
-                    // Description
-                    item {
-                        Column {
+                        // Priority
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Description",
+                                text = "Priority",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color.Black
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFF5F5F5)
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text(
-                                    text = description,
-                                    modifier = Modifier.padding(10.dp),
-                                    color = Color.Black,
-                                    lineHeight = 18.sp,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-                    }
-
-                    // Attached Files
-                    item {
-                        Column {
-                            Text(
-                                text = "Attached Files",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Black
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            attachedFiles.forEach { fileName ->
+                            if (editedTask.priority > 0) {
                                 Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 2.dp),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = Color(0xFFF5F5F5)
+                                        containerColor = Color(0xFF03A9F4).copy(alpha = 0.1f)
                                     ),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Row(
+                                    Text(
+                                        text = "Priority ${editedTask.priority}",
                                         modifier = Modifier.padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            when {
-                                                fileName.endsWith(".pdf") -> Icons.Default.PictureAsPdf
-                                                fileName.endsWith(".jpg") || fileName.endsWith(".png") -> Icons.Default.Image
-                                                else -> Icons.AutoMirrored.Filled.InsertDriveFile
-                                            },
-                                            contentDescription = null,
-                                            tint = Color(0xFF2196F3),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = fileName,
-                                            modifier = Modifier.weight(1f),
-                                            color = Color.Black,
-                                            fontSize = 13.sp
-                                        )
-                                        IconButton(
-                                            onClick = { /* Download file */ },
-                                            modifier = Modifier.size(24.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Download,
-                                                contentDescription = "Download",
-                                                tint = Color.Gray,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
+                                        color = Color(0xFF03A9F4),
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 13.sp
+                                    )
                                 }
-                            }
-
-                            // Add file button
-                            OutlinedButton(
-                                onClick = { /* Add file */ },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, Color(0xFF2196F3).copy(alpha = 0.5f))
-                            ) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = Color(0xFF2196F3),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
+                            } else {
                                 Text(
-                                    text = "Add File",
-                                    color = Color(0xFF2196F3)
-                                )
-                            }
-                        }
-                    }
-
-                    // Notes
-                    item {
-                        Column {
-                            Text(
-                                text = "Notes",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Black
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFF5F5F5)
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text(
-                                    text = notes,
-                                    modifier = Modifier.padding(16.dp),
-                                    color = Color.Black,
-                                    lineHeight = 20.sp
+                                    text = "No priority set",
+                                    color = Color.Gray,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(vertical = 10.dp)
                                 )
                             }
                         }
                     }
                 }
 
-                // Action Buttons with minimal padding
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { onTaskDelete(task.id) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(),
-                        border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = Color.Red,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Delete",
-                            color = Color.Red,
-                            fontSize = 13.sp
+                // Progress
+                item {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Progress",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                            Text(
+                                text = "${progress.toInt()}%",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF2196F3)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { progress / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = Color(0xFF2196F3),
+                            trackColor = Color(0xFF2196F3).copy(alpha = 0.1f)
                         )
                     }
+                }
 
-                    Button(
-                        onClick = {
-                            val updatedTask = editedTask.copy(
-                                isCompleted = !editedTask.isCompleted
-                            )
-                            onTaskUpdate(updatedTask)
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (editedTask.isCompleted) Color(0xFFFF9800) else Color(
-                                0xFF4CAF50
-                            )
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(
-                            if (editedTask.isCompleted) Icons.Default.Refresh else Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                // Due Date
+                item {
+                    Column {
                         Text(
-                            text = if (editedTask.isCompleted) "Mark Incomplete" else "Mark Complete",
-                            fontSize = 13.sp
+                            text = "Due Date",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Black
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFF5F5F5)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.CalendarToday,
+                                    contentDescription = null,
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = dueDate,
+                                    color = Color.Black
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Description
+                item {
+                    Column {
+                        Text(
+                            text = "Description",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFF5F5F5)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = description,
+                                modifier = Modifier.padding(12.dp),
+                                color = Color.Black,
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
+                }
+
+                // Attached Files
+                item {
+                    Column {
+                        Text(
+                            text = "Attached Files",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        attachedFiles.forEach { fileName ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFFF5F5F5)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        when {
+                                            fileName.endsWith(".pdf") -> Icons.Default.PictureAsPdf
+                                            fileName.endsWith(".jpg") || fileName.endsWith(".png") -> Icons.Default.Image
+                                            else -> Icons.AutoMirrored.Filled.InsertDriveFile
+                                        },
+                                        contentDescription = null,
+                                        tint = Color(0xFF2196F3),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = fileName,
+                                        modifier = Modifier.weight(1f),
+                                        color = Color.Black,
+                                        fontSize = 13.sp
+                                    )
+                                    IconButton(
+                                        onClick = { /* Download file */ },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Download,
+                                            contentDescription = "Download",
+                                            tint = Color.Gray,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Add file button
+                        OutlinedButton(
+                            onClick = { /* Add file */ },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFF2196F3).copy(alpha = 0.5f))
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Color(0xFF2196F3),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Add File",
+                                color = Color(0xFF2196F3)
+                            )
+                        }
+                    }
+                }
+
+                // Notes
+                item {
+                    Column {
+                        Text(
+                            text = "Notes",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFF5F5F5)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = notes,
+                                modifier = Modifier.padding(12.dp),
+                                color = Color.Black,
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
+                }
+
+                // Action Buttons
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 20.dp, bottom = 80.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { onTaskDelete(task.id) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(),
+                            border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color.Red,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Delete",
+                                color = Color.Red,
+                                fontSize = 13.sp
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                val updatedTask = editedTask.copy(
+                                    isCompleted = !editedTask.isCompleted
+                                )
+                                onTaskUpdate(updatedTask)
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (editedTask.isCompleted) Color(0xFFFF9800) else Color(
+                                    0xFF4CAF50
+                                )
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                if (editedTask.isCompleted) Icons.Default.Refresh else Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (editedTask.isCompleted) "Mark Incomplete" else "Mark Complete",
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }

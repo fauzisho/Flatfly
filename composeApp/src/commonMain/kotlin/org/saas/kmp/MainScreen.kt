@@ -15,7 +15,9 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -52,21 +54,28 @@ fun MainScreen() {
             navigationItem != null
         }
     }
-    val isBottomBarVisible by remember(isMediumExpandedWWSC) {
+    
+    // State to control dialog visibility and hide bottom navigation
+    var isDialogVisible by remember { mutableStateOf(false) }
+    
+    val isBottomBarVisible by remember(isMediumExpandedWWSC, isDialogVisible) {
         derivedStateOf {
             if (!isMediumExpandedWWSC) {
-                navigationItem != null
+                navigationItem != null && !isDialogVisible
             } else {
                 false
             }
         }
     }
+    
     MainScaffold(
         rootNavController = rootNavController,
         currentRoute = currentRoute,
         isMediumExpandedWWSC = isMediumExpandedWWSC,
         isBottomBarVisible = isBottomBarVisible,
         isMainScreenVisible = isMainScreenVisible,
+        isDialogVisible = isDialogVisible,
+        onDialogVisibilityChange = { isVisible -> isDialogVisible = isVisible },
         onItemClick = { currentNavigationItem ->
             rootNavController.navigate(currentNavigationItem.route) {
                 // Pop up to the start destination of the graph to
@@ -96,6 +105,8 @@ fun MainScaffold(
     isMediumExpandedWWSC: Boolean,
     isBottomBarVisible: Boolean,
     isMainScreenVisible: Boolean,
+    isDialogVisible: Boolean,
+    onDialogVisibilityChange: (Boolean) -> Unit,
     onItemClick: (NavigationItem) -> Unit,
 ) {
     Row {
@@ -144,6 +155,7 @@ fun MainScaffold(
             RootNavGraph(
                 rootNavController = rootNavController,
                 innerPadding = innerPadding,
+                onDialogVisibilityChange = onDialogVisibilityChange
             )
         }
     }

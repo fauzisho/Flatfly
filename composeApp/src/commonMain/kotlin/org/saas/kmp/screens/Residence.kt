@@ -35,7 +35,8 @@ import org.saas.kmp.screens.sampledata.SampleData
 @Composable
 fun ResidenceScreen(
     rootNavController: NavController,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    onDialogVisibilityChange: (Boolean) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf("Find Houses") }
     var showFilters by remember { mutableStateOf(false) }
@@ -187,26 +188,41 @@ fun ResidenceScreen(
     }
 
     if (showPropertyDetail && selectedProperty != null) {
+        // Hide bottom navigation when dialog is shown
+        LaunchedEffect(Unit) {
+            onDialogVisibilityChange(true)
+        }
+        
         PropertyDetailDialog(
             property = selectedProperty!!,
             onDismiss = {
                 showPropertyDetail = false
                 selectedProperty = null
+                // Show bottom navigation when dialog is closed
+                onDialogVisibilityChange(false)
             },
             onEmailClick = {
                 showPropertyDetail = false
                 showEmailDialog = true
+                // Keep navigation hidden since we're opening email dialog
             }
         )
     }
 
     if (showEmailDialog && selectedProperty != null) {
+        // Hide bottom navigation when dialog is shown
+        LaunchedEffect(Unit) {
+            onDialogVisibilityChange(true)
+        }
+        
         EmailGeneratorDialog(
             property = selectedProperty!!,
             userProfile = userProfile,
             onDismiss = {
                 showEmailDialog = false
                 selectedProperty = null
+                // Show bottom navigation when dialog is closed
+                onDialogVisibilityChange(false)
             }
         )
     }

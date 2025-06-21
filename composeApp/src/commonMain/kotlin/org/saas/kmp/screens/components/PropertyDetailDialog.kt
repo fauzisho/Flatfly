@@ -1,7 +1,9 @@
 package org.saas.kmp.screens.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +18,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bed
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -31,19 +39,31 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.painterResource
 import org.saas.kmp.model.HouseProperty
+import saaskmp.composeapp.generated.resources.Res
+import saaskmp.composeapp.generated.resources.a
+import saaskmp.composeapp.generated.resources.b
+import saaskmp.composeapp.generated.resources.c
 
 
 @Composable
@@ -52,7 +72,16 @@ fun PropertyDetailDialog(
     onDismiss: () -> Unit,
     onEmailClick: () -> Unit
 ) {
-    // Full screen overlay
+    val imageResources = remember {
+        listOf(
+            Res.drawable.a,
+            Res.drawable.b,
+            Res.drawable.c
+        )
+    }
+    var selectedImageIndex by remember { mutableStateOf<Int?>(null) }
+
+    // Main content
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -132,6 +161,65 @@ fun PropertyDetailDialog(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Image Gallery - Compact horizontal list
+                item {
+                    Column {
+                        Text(
+                            text = "Photos",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            itemsIndexed(imageResources) { index, imageResource ->
+                                Card(
+                                    modifier = Modifier
+                                        .width(120.dp)
+                                        .height(90.dp)
+                                        .clickable { selectedImageIndex = index },
+                                    shape = RoundedCornerShape(8.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Box {
+                                        Image(
+                                            painter = painterResource(imageResource),
+                                            contentDescription = "Property image ${index + 1}",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+
+                                        // Image counter overlay
+                                        Card(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .padding(6.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = Color.Black.copy(alpha = 0.7f)
+                                            ),
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "${index + 1}/${imageResources.size}",
+                                                modifier = Modifier.padding(
+                                                    horizontal = 4.dp,
+                                                    vertical = 2.dp
+                                                ),
+                                                color = Color.White,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 // Price and basic info
                 item {
                     Card(
@@ -327,6 +415,15 @@ fun PropertyDetailDialog(
             }
         }
     }
+
+    // Show fullscreen image if one is selected - render on top
+    selectedImageIndex?.let { index ->
+        FullscreenImageGallery(
+            imageResources = imageResources,
+            initialIndex = index,
+            onDismiss = { selectedImageIndex = null }
+        )
+    }
 }
 
 @Composable
@@ -357,5 +454,122 @@ fun ContactRow(
             fontSize = 13.sp,
             modifier = Modifier.weight(1f)
         )
+    }
+}
+
+@Composable
+fun FullscreenImageGallery(
+    imageResources: List<org.jetbrains.compose.resources.DrawableResource>,
+    initialIndex: Int,
+    onDismiss: () -> Unit
+) {
+    val pagerState = rememberPagerState(
+        initialPage = initialIndex,
+        pageCount = { imageResources.size }
+    )
+
+    // Full screen overlay
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // Image Pager with swipe functionality
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { onDismiss() },
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(imageResources[page]),
+                    contentDescription = "Property image ${page + 1}",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+
+        // Top bar with close button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Title
+            Text(
+                text = "Property Photos",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            // Close button
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        // Bottom indicator and counter
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Page indicators
+            if (imageResources.size > 1) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    repeat(imageResources.size) { index ->
+                        Box(
+                            modifier = Modifier
+                                .size(if (index == pagerState.currentPage) 10.dp else 8.dp)
+                                .background(
+                                    color = if (index == pagerState.currentPage) 
+                                        Color.White 
+                                    else 
+                                        Color.White.copy(alpha = 0.5f),
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                }
+            }
+
+            // Image counter
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Black.copy(alpha = 0.8f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "${pagerState.currentPage + 1} of ${imageResources.size}",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }
