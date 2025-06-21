@@ -44,7 +44,7 @@ val navigationItemsLists = listOf(
     NavigationItem(
         unSelectedIcon = Icons.Outlined.Hotel,
         selectedIcon = Icons.Filled.Hotel,
-        title = "Residence",
+        title = "Housing",
         route = Routes.Residence.route,
     ),
     NavigationItem(

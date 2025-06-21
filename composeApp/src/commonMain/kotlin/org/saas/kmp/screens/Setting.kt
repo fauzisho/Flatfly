@@ -26,7 +26,7 @@ fun AccountScreen(
     ) {
         // Title at the top left
         Text(
-            text = "Setting",
+            text = "Account",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,

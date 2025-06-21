@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -135,13 +136,14 @@ fun DocumentScreen(
             .padding(paddingValues)
     ) {
         // Top tabs
-        Row(
+        LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(end = 16.dp)
         ) {
-            listOf("All Tasks", "Completed", "In Progress", "Not Started").forEach { tab ->
+            items(listOf("All Tasks", "Completed", "In Progress", "Not Started")) { tab ->
                 Text(
                     text = tab,
                     color = if (selectedTab == tab) Color.White else Color.Gray,
@@ -152,18 +154,26 @@ fun DocumentScreen(
                             RoundedCornerShape(16.dp)
                         )
                         .padding(horizontal = 12.dp, vertical = 6.dp)
-                        .clickable { selectedTab = tab }
+                        .clickable { selectedTab = tab },
+                    maxLines = 1
                 )
             }
+        }
 
-            Spacer(modifier = Modifier.weight(1f))
-
+        // Control buttons row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             // Magic Upload button
             Button(
                 onClick = { showUploadDialog = true },
                 modifier = Modifier.height(32.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFB39DDB)
+                    containerColor = Color(0xFF03A9F4)
                 ),
                 contentPadding = PaddingValues(horizontal = 12.dp),
                 shape = RoundedCornerShape(8.dp)
@@ -389,7 +399,7 @@ fun TaskItemRow(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFB39DDB))
+                    .background(Color(0xFF03A9F4))
                     .padding(horizontal = 8.dp, vertical = 2.dp)
             ) {
                 Text(
@@ -478,7 +488,7 @@ fun TaskGridCard(
                         .align(Alignment.TopEnd)
                         .padding(10.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFFB39DDB))
+                        .background(Color(0xFF03A9F4))
                         .padding(horizontal = 6.dp, vertical = 3.dp)
                 ) {
                     Text(
@@ -693,33 +703,34 @@ fun TaskDetailDialog(
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .fillMaxHeight(0.8f),
-            shape = RoundedCornerShape(16.dp),
+                .fillMaxWidth(0.98f)
+                .fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
+                modifier = Modifier.fillMaxSize()
             ) {
-                // Header
+                // Header with minimal horizontal padding
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = editedTask.title,
-                            fontSize = 24.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
                         Text(
                             text = "Task ID: ${editedTask.id}",
-                            fontSize = 14.sp,
-                            color = Color.Gray
+                            fontSize = 13.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(top = 2.dp)
                         )
                     }
 
@@ -727,22 +738,24 @@ fun TaskDetailDialog(
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = Color.Gray
+                            tint = Color.Gray,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
+                // Content with minimal horizontal padding
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Status and Priority Row
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             // Status
                             Column(modifier = Modifier.weight(1f)) {
@@ -763,9 +776,9 @@ fun TaskDetailDialog(
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(12.dp),
+                                        modifier = Modifier.padding(10.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         Icon(
                                             if (editedTask.isCompleted) Icons.Default.CheckCircle else Icons.Default.Schedule,
@@ -773,7 +786,7 @@ fun TaskDetailDialog(
                                             tint = if (editedTask.isCompleted) Color(0xFF4CAF50) else Color(
                                                 0xFF2196F3
                                             ),
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(18.dp)
                                         )
                                         Text(
                                             text = if (editedTask.isCompleted) "Completed" else "In Progress",
@@ -798,15 +811,16 @@ fun TaskDetailDialog(
                                 if (editedTask.priority > 0) {
                                     Card(
                                         colors = CardDefaults.cardColors(
-                                            containerColor = Color(0xFFB39DDB).copy(alpha = 0.1f)
+                                            containerColor = Color(0xFF03A9F4).copy(alpha = 0.1f)
                                         ),
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
                                         Text(
                                             text = "Priority ${editedTask.priority}",
-                                            modifier = Modifier.padding(12.dp),
-                                            color = Color(0xFFB39DDB),
-                                            fontWeight = FontWeight.Medium
+                                            modifier = Modifier.padding(10.dp),
+                                            color = Color(0xFF03A9F4),
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 13.sp
                                         )
                                     }
                                 } else {
@@ -814,7 +828,7 @@ fun TaskDetailDialog(
                                         text = "No priority set",
                                         color = Color.Gray,
                                         fontSize = 14.sp,
-                                        modifier = Modifier.padding(vertical = 12.dp)
+                                        modifier = Modifier.padding(vertical = 10.dp)
                                     )
                                 }
                             }
@@ -871,9 +885,9 @@ fun TaskDetailDialog(
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(12.dp),
+                                    modifier = Modifier.padding(10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Icon(
                                         Icons.Default.CalendarToday,
@@ -908,9 +922,10 @@ fun TaskDetailDialog(
                             ) {
                                 Text(
                                     text = description,
-                                    modifier = Modifier.padding(12.dp),
+                                    modifier = Modifier.padding(10.dp),
                                     color = Color.Black,
-                                    lineHeight = 20.sp
+                                    lineHeight = 18.sp,
+                                    fontSize = 13.sp
                                 )
                             }
                         }
@@ -938,9 +953,9 @@ fun TaskDetailDialog(
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(12.dp),
+                                        modifier = Modifier.padding(10.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Icon(
                                             when {
@@ -950,12 +965,13 @@ fun TaskDetailDialog(
                                             },
                                             contentDescription = null,
                                             tint = Color(0xFF2196F3),
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(18.dp)
                                         )
                                         Text(
                                             text = fileName,
                                             modifier = Modifier.weight(1f),
-                                            color = Color.Black
+                                            color = Color.Black,
+                                            fontSize = 13.sp
                                         )
                                         IconButton(
                                             onClick = { /* Download file */ },
@@ -1012,7 +1028,7 @@ fun TaskDetailDialog(
                             ) {
                                 Text(
                                     text = notes,
-                                    modifier = Modifier.padding(12.dp),
+                                    modifier = Modifier.padding(16.dp),
                                     color = Color.Black,
                                     lineHeight = 20.sp
                                 )
@@ -1021,12 +1037,12 @@ fun TaskDetailDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Action Buttons
+                // Action Buttons with minimal padding
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedButton(
                         onClick = { onTaskDelete(task.id) },
@@ -1041,10 +1057,11 @@ fun TaskDetailDialog(
                             tint = Color.Red,
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Delete",
-                            color = Color.Red
+                            color = Color.Red,
+                            fontSize = 13.sp
                         )
                     }
 
@@ -1068,9 +1085,10 @@ fun TaskDetailDialog(
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (editedTask.isCompleted) "Mark Incomplete" else "Mark Complete"
+                            text = if (editedTask.isCompleted) "Mark Incomplete" else "Mark Complete",
+                            fontSize = 13.sp
                         )
                     }
                 }
