@@ -32,36 +32,55 @@ Cloud: AWS/Azure (Production)
 | Windows | 10+ | ✅ Stable | [MSI](https://github.com/fauzisho/Flatfly/releases/download/v0.0.3/FlatFly-1.0.0.msi) |
 | macOS | 10.15+ | ✅ Stable | [DMG](https://github.com/fauzisho/Flatfly/releases/download/v0.0.3/FlatFly-1.0.0.dmg) |
 | Web | Modern browsers | ✅ Stable | [Live Demo](https://fauzisho.github.io/Flatfly) |
-
 ## 📸 Screenshots
 
 ### Mobile Applications
 
-#### Android Interface
-![Android Home Screen](screenshots/android-home.png)
-*Main dashboard showing available apartments and quick actions*
-
-![Android Chat Interface](screenshots/android-chat.png)
-*AI-powered chat assistant for housing inquiries*
-
-![Android Apartment Details](screenshots/android-apartment-details.png)
-*Detailed apartment view with 360° photos and booking options*
+#### Android Interface  
+<table>
+  <tr>
+    <td><strong>Android Home Screen</strong></td>
+    <td><strong>Android Chat Interface</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/android-home.png" width="45%"><br><sub>Main dashboard showing available apartments and quick actions</sub></td>
+    <td><img src="screenshots/android-chat.png" width="45%"><br><sub>AI-powered chat assistant for housing inquiries</sub></td>
+  </tr>
+  <tr>
+    <td><strong>Apartment Details</strong></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/android-apartment-details.png" width="45%"><br><sub>Detailed apartment view with 360° photos and booking options</sub></td>
+    <td></td>
+  </tr>
+</table>
 
 ### Desktop Applications
 
-#### macOS Application
-![macOS Interface](screenshots/macos-main.png)
-*Native macOS design with Touch Bar support*
+#### macOS Application  
+<table>
+  <tr>
+    <td><strong>macOS Interface</strong></td>
+    <td><strong>macOS Settings</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/macos-main.png" width="85%"><br><sub>Native macOS design with Touch Bar support</sub></td>
+    <td><img src="screenshots/macos-setting.png" width="85%"><br><sub>Comprehensive settings panel with dark mode support</sub></td>
+  </tr>
+</table>
 
-![macOS Settings](screenshots/macos-settings.png)
-*Comprehensive settings panel with dark mode support*
-
-### Web Application
-![Web Dashboard](screenshots/web-dashboard.png)
-*Responsive web interface accessible from any browser*
-
-![Web Mobile View](screenshots/web-mobile.png)
-*Mobile-optimized web experience*
+### Web Application  
+<table>
+  <tr>
+    <td><strong>Web Dashboard</strong></td>
+    <td><strong>Web Mobile View</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/web-dashboard.png" width="95%"><br><sub>Responsive web interface accessible from any browser</sub></td>
+    <td><img src="screenshots/web-mobile.png" width="95%"><br><sub>Mobile-optimized web experience</sub></td>
+  </tr>
+</table>
 
 ## Development Team
 
