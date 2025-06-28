@@ -1,26 +1,72 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Web, Desktop, Server.
+# FlatFly MVP - Technical Documentation
 
-* `/composeApp` is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - `commonMain` is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    `iosMain` would be the right folder for such calls.
+[![Platform](https://img.shields.io/badge/Platform-Kotlin%20Multiplatform-blue)](https://kotlinlang.org/docs/multiplatform.html)
+[![Version](https://img.shields.io/badge/Version-v0.0.3-green)](https://github.com/fauzisho/Flatfly/releases)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-* `/iosApp` contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform, 
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+## 📋 Table of Contents
 
-* `/server` is for the Ktor server application.
+- [Overview](#overview)
+- [Platform Support](#platform-support)
+- [Screenshots](#screenshots)
+- [Development Team](#screenshots)
 
-* `/shared` is for the code that will be shared between all targets in the project.
-  The most important subfolder is `commonMain`. If preferred, you can add code to the platform-specific folders here too.
+## 🔍 Overview
 
+FlatFly is a cross-platform application built with Kotlin Multiplatform (KMP) that provides housing solutions for international students in Ingolstadt, Germany. The application integrates AI-powered assistance, document management, and real-time communication features.
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
-[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
-[Kotlin/Wasm](https://kotl.in/wasm/)…
+### Technical Stack
+Frontend: Kotlin Multiplatform + Compose Multiplatform  
+Backend: Ktor Server + PostgreSQL  
+AI Integration: OpenAI GPT-4 API  
+Analytics: Mixpanel SDK  
+Deployment: Docker + GitHub Actions  
+Cloud: AWS/Azure (Production)  
 
-We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
-If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+## 📱 Platform Support
 
-You can open the web application by running the `:composeApp:wasmJsBrowserDevelopmentRun` Gradle task.
+| Platform | Version | Status | Download |
+|----------|---------|--------|----------|
+| Android | 7.0+ (API 24+) | ✅ Stable | [APK](https://github.com/fauzisho/Flatfly/releases/download/v0.0.3/composeApp-debug.apk) |
+| iOS | 13.0+ | ✅ Stable | Available by request |
+| Windows | 10+ | ✅ Stable | [MSI](https://github.com/fauzisho/Flatfly/releases/download/v0.0.3/FlatFly-1.0.0.msi) |
+| macOS | 10.15+ | ✅ Stable | [DMG](https://github.com/fauzisho/Flatfly/releases/download/v0.0.3/FlatFly-1.0.0.dmg) |
+| Web | Modern browsers | ✅ Stable | [Live Demo](https://fauzisho.github.io/Flatfly) |
+
+## 📸 Screenshots
+
+### Mobile Applications
+
+#### Android Interface
+![Android Home Screen](screenshots/android-home.png)
+*Main dashboard showing available apartments and quick actions*
+
+![Android Chat Interface](screenshots/android-chat.png)
+*AI-powered chat assistant for housing inquiries*
+
+![Android Apartment Details](screenshots/android-apartment-details.png)
+*Detailed apartment view with 360° photos and booking options*
+
+### Desktop Applications
+
+#### macOS Application
+![macOS Interface](screenshots/macos-main.png)
+*Native macOS design with Touch Bar support*
+
+![macOS Settings](screenshots/macos-settings.png)
+*Comprehensive settings panel with dark mode support*
+
+### Web Application
+![Web Dashboard](screenshots/web-dashboard.png)
+*Responsive web interface accessible from any browser*
+
+![Web Mobile View](screenshots/web-mobile.png)
+*Mobile-optimized web experience*
+
+## Development Team
+
+Kristina Schurr - Bussiness (Hustler)  
+Fauzi Sholichin - Developer (Hacker)  
+Ferihan Özyigit - Designer (Hipster)  
+
+Built with ❤️ for international students
