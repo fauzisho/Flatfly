@@ -1,9 +1,9 @@
 package org.saas.kmp.model
 
 data class UserProfile(
-    val name: String = "John Doe",
-    val budget: IntRange = 800..1500,
-    val preferredArea: String = "City Center",
+    val name: String = "Michael Salim\n",
+    val budget: IntRange = 300..700,
+    val preferredArea: String = "City Center, Near THI",
     val roomCount: Int = 2,
     val petFriendly: Boolean = false,
     val furnished: Boolean = true,
